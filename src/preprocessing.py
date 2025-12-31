@@ -32,26 +32,30 @@ def prepare_ip_data(ip_df):
     ip_df['upper_bound_ip_address'] = ip_df['upper_bound_ip_address'].astype(int)
     ip_df = ip_df.sort_values('lower_bound_ip_address')
     return ip_df
+ 
 
 
 
-def merge_ip_country(fraud_df, ip_df):
-    fraud_df['ip_int'] = fraud_df['ip_address'].apply(ip_to_int)
-    fraud_df = fraud_df.dropna(subset=['ip_int'])
-    fraud_df['ip_int'] = fraud_df['ip_int'].astype(int)
 
+def merge_ip_country(df, ip_df):
+    # Convert IP string to integer if not done yet
+    if df['ip_address_int'].dtype != np.int64:
+        df['ip_address_int'] = df['ip_address_int'].astype(np.int64)
+
+    ip_df['lower_bound_ip_address'] = ip_df['lower_bound_ip_address'].astype(np.int64)
+    ip_df['upper_bound_ip_address'] = ip_df['upper_bound_ip_address'].astype(np.int64)
+
+    # Sort by IP for merge_asof
+    df = df.sort_values('ip_address_int')
     ip_df = ip_df.sort_values('lower_bound_ip_address')
 
     merged = pd.merge_asof(
-        fraud_df.sort_values('ip_int'),
+        df,
         ip_df,
-        left_on='ip_int',
+        left_on='ip_address_int',
         right_on='lower_bound_ip_address',
         direction='backward'
     )
 
-    merged = merged[
-        merged['ip_int'] <= merged['upper_bound_ip_address']
-    ]
-
     return merged
+
